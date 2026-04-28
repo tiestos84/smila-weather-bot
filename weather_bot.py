@@ -1,28 +1,33 @@
 import asyncio
-import requests
 import os
+import aiohttp
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiohttp import web
 
-# 1. Твій токен та налаштування
+# 1. Твій токен
 API_TOKEN = '8591307931:AAFy1a_fa3cgW7RS9sm_UWy80zK9rFKJKrs'
-CHAT_ID = 1017326410  # Сюди бот буде писати щогодини
+CHAT_ID = 1017326410 
 
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher()
 
-# 2. Функція отримання погоди
-def get_weather():
+# 2. Оновлена функція погоди (надійніша)
+async def get_weather():
     url = "https://api.open-meteo.com/v1/forecast?latitude=49.23&longitude=31.88&current_weather=true&windspeed_unit=ms&timezone=auto"
     try:
-        response = requests.get(url).json()
-        res = response['current_weather']
-        return f"🌡 Температура: {res['temperature']}°C\n💨 Вітер: {res['windspeed']} м/с"
-    except:
-        return "Не вдалося отримати погоду 🌦"
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    res = data['current_weather']
+                    return f"🌡 Температура: {res['temperature']}°C\n💨 Вітер: {res['windspeed']} м/с"
+                else:
+                    return "Помилка сервера погоди 🌦"
+    except Exception as e:
+        return f"Помилка зв'язку ❌"
 
-# 3. Веб-сервер для Render (щоб не засинав)
+# 3. Веб-сервер для Render
 async def handle(request):
     return web.Response(text="Бот працює!")
 
@@ -37,26 +42,25 @@ async def start_web_server():
 # 4. Щогодинна розсилка
 async def hourly_broadcast():
     while True:
-        weather_text = get_weather()
+        await asyncio.sleep(3600)
+        weather_text = await get_weather()
         try:
             await bot.send_message(CHAT_ID, f"📢 Щогодинний звіт:\n\n{weather_text}")
-        except Exception as e:
-            print(f"Помилка розсилки: {e}")
-        
-        await asyncio.sleep(3600)  # Чекати рівно 1 годину
+        except:
+            pass
 
-# 5. Команди для користувача
+# 5. Обробка команд
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
     global CHAT_ID
     CHAT_ID = message.chat.id
-    await message.answer(f"Привіт! Тепер я буду надсилати погоду сюди щогодини. ✅")
+    await message.answer("Бот активовано! ✅ Буду писати щогодини сюди.")
 
 @dp.message(Command("weather"))
 async def cmd_weather(message: types.Message):
-    await message.answer(get_weather())
+    weather_info = await get_weather()
+    await message.reply(f"Погода у Смілі зараз:\n\n{weather_info}")
 
-# 6. Запуск всього разом
 async def main():
     asyncio.create_task(start_web_server())
     asyncio.create_task(hourly_broadcast())
