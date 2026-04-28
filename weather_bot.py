@@ -5,7 +5,7 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiohttp import web
 
-API_TOKEN = '8591307931:AAFy1a_fa3cgW7RS9sm_UWy80zK9rFKJKrs'
+API_TOKEN = '8591307931:AAFMIBTeCJMmjueW80nycbAZOWzrz7NK4uk'
 CHAT_ID = 1017326410 
 
 bot = Bot(token=API_TOKEN)
